@@ -35,6 +35,9 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private LayerMask maskLayer;       // 设置为 "Mask" 图层
     [SerializeField] private LayerMask doorLayer;       // 设置为 "Door" 图层
     [SerializeField] private Transform maskDropPoint;   // 面具掉落位置（角色头顶或前方）
+    [Header("开局设置")]
+    [SerializeField] private GameObject startMaskPrefab;    //开局时戴的面具预制体
+
 
     private PlayerMask currentMaskInstance; // 存储当前逻辑组件
     private GameObject currentMaskPrefab;    // 存储当前面具的预制体引用，用于交换时重新生成
@@ -53,9 +56,9 @@ public class PlayerController : MonoBehaviour
     #region Animations
     // 动画参数
     private Animator anim;
-    //private static readonly int IsMoving = Animator.StringToHash("isMoving");
-    //private static readonly int VerticalVelocity = Animator.StringToHash("verticalVelocity");
-    //private static readonly int OnGround = Animator.StringToHash("isGrounded");
+    private static readonly int IsMoving = Animator.StringToHash("isMoving");
+    private static readonly int VerticalVelocity = Animator.StringToHash("verticalVelocity");
+    private static readonly int OnGround = Animator.StringToHash("isGrounded");
 
     #endregion
 
@@ -65,6 +68,18 @@ public class PlayerController : MonoBehaviour
         rb = GetComponent<Rigidbody2D>();
         anim = GetComponent<Animator>();
         CalculatePhysics();
+    }
+
+    void Start()
+    {
+        if (startMaskPrefab != null)
+        {
+            // 获取预制体上的 PlayerMask 组件
+            if (startMaskPrefab.TryGetComponent<PlayerMask>(out var maskData))
+            {
+                ApplyInitialMask(maskData);
+            }
+        }
     }
 
     // 当你在Inspector修改数值时，实时更新物理参数
@@ -162,7 +177,7 @@ public class PlayerController : MonoBehaviour
 
     private void HandleInteraction()
     {
-        if (Input.GetKeyDown(KeyCode.F))
+        if (Input.GetKeyDown(KeyCode.J) || Input.GetKeyDown(KeyCode.E))
         {
             Collider2D[] hits = Physics2D.OverlapCircleAll(transform.position, interactRange, maskLayer);
             foreach (var hit in hits)
@@ -245,6 +260,20 @@ public class PlayerController : MonoBehaviour
     }
     #endregion
 
+    #region StartMask
+
+    private void ApplyInitialMask(PlayerMask maskData)
+    {
+        currentMaskInstance = gameObject.AddComponent(maskData.GetType()) as PlayerMask;
+        CopyMaskProperties(maskData, currentMaskInstance);
+        currentMaskInstance.ApplyEffect(this);
+        hasMask = true;
+
+        //if (anim != null) anim.SetInteger("MaskID", (int)currentMaskInstance.maskType);
+    }
+
+    #endregion
+
     #region SportsMask
 
     private void HandleBrickDestruction(Collision2D collision)
@@ -279,9 +308,9 @@ public class PlayerController : MonoBehaviour
     {
         if (anim == null) return;
 
-        //anim.SetBool(IsMoving, Mathf.Abs(horizontalInput) > 0.1f);
-        //anim.SetBool(OnGround, isGrounded);
-        //anim.SetFloat(VerticalVelocity, rb.velocity.y);
+        anim.SetBool(IsMoving, Mathf.Abs(horizontalInput) > 0.1f);
+        anim.SetBool(OnGround, isGrounded);
+        anim.SetFloat(VerticalVelocity, rb.velocity.y);
 
         // 角色转向
         if (horizontalInput > 0) transform.localScale = new Vector3(1, 1, 1);

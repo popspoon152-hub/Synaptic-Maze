@@ -10,6 +10,8 @@ public enum MaskType
     SportsMask,
     JumpMask,
     TeachMask,
+    LightMask,
+    CoverMask
 };
 
 public abstract class PlayerMask : MonoBehaviour
