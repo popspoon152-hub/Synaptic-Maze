@@ -3,7 +3,16 @@
 --- !u!78 &1
 TagManager:
   serializedVersion: 2
-  tags: []
+  tags:
+  - Mask
+  - PumpkinMaskCover
+  - SportsMaskCover
+  - JumpMaskCover
+  - LightMaskCover
+  - CoverMaskCover
+  - Spikes
+  - PumpkinMaskCoverSpikes
+  - CheckPoints
   layers:
   - Default
   - TransparentFX
@@ -11,11 +20,11 @@ TagManager:
   - 
   - Water
   - UI
-  - 
-  - 
-  - 
-  - 
-  - 
+  - Ground
+  - OneWay
+  - Mask
+  - Door
+  - Brick
   - 
   - 
   - 

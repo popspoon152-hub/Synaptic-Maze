@@ -1,166 +1,311 @@
+using System;
 using UnityEngine;
 
+[RequireComponent(typeof(Rigidbody2D))]
 public class PlayerController : MonoBehaviour
 {
-    // 输入控制
-    private float moveInput;
-    private bool isJumpPressed;
-    
-    // 物理组件
+
+    #region Walk && Jump Parameters
+    [Header("移动设置 (Movement)")]
+    public float startSpeed = 2f;      // 初始速度
+    public float acceleration = 20f;   // 加速度
+    public float maxSpeed = 8f;        // 最大速度
+
+    [Header("跳跃设置 (Jump Settings)")]
+    public float jumpHeight = 4f;      // 跳跃最高高度
+    public float timeToApex = 0.4f;    // 到达顶点所需时间
+
+    [Header("地面检测 (Ground Check)")]
+    public LayerMask groundLayer;      // 地面图层
+    public Transform groundCheckPoint; // 检测点
+    public float checkRadius = 0.2f;   // 检测半径
+
     private Rigidbody2D rb;
-    private Animator animator;
-    private Collider2D collider;
-    
-    // 地面检测
-    [Header("地面检测")]
-    [SerializeField] private LayerMask groundLayer;
-    [SerializeField] private Transform groundCheck;
-    [SerializeField] private float groundCheckRadius = 0.2f;
+    private float horizontalInput;
     private bool isGrounded;
-    
-    // 移动参数
-    [Header("移动参数")]
-    [SerializeField] private float moveInitialVelocity = 5f;
-    [SerializeField] private float moveAcceleration = 20f;
-    [SerializeField] private float maxMoveSpeed = 10f;
-    
-    // 跳跃参数
-    [Header("跳跃参数")]
-    [SerializeField] private float jumpMaxHeight = 3f;
-    [SerializeField] private float jumpTimeToApex = 0.5f;
-    private float jumpForce;
-    private float gravityScale;
-    private float originalGravityScale;
-    
+    private float jumpVelocity;
+    private float gravityStrength;
+
+    #endregion
+
+    #region MaskParameters
+
+    [Header("面具交互设置")]
+    [SerializeField] private float interactRange = 1.5f;
+    [SerializeField] private LayerMask maskLayer;       // 设置为 "Mask" 图层
+    [SerializeField] private LayerMask doorLayer;       // 设置为 "Door" 图层
+    [SerializeField] private Transform maskDropPoint;   // 面具掉落位置（角色头顶或前方）
+
+    private PlayerMask currentMaskInstance; // 存储当前逻辑组件
+    private GameObject currentMaskPrefab;    // 存储当前面具的预制体引用，用于交换时重新生成
+    private bool hasMask = false;
+
+    #endregion
+
+    #region SportsMaskParameters
+
+    [Header("SportsMask 砖块交互")]
+    [SerializeField] private LayerMask brickLayer;
+    [SerializeField] private float smashRadius = 1.0f;
+
+    #endregion
+
+    #region Animations
     // 动画参数
-    private static readonly int IsMoving = Animator.StringToHash("IsMoving");
-    private static readonly int IsJumping = Animator.StringToHash("IsJumping");
-    private static readonly int IsGrounded = Animator.StringToHash("IsGrounded");
-    
-    private void Awake()
+    private Animator anim;
+    //private static readonly int IsMoving = Animator.StringToHash("isMoving");
+    //private static readonly int VerticalVelocity = Animator.StringToHash("verticalVelocity");
+    //private static readonly int OnGround = Animator.StringToHash("isGrounded");
+
+    #endregion
+
+    #region LifeCycle  Input && Physics && SportsMask
+    void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
-        animator = GetComponent<Animator>();
-        collider = GetComponent<Collider2D>();
-        originalGravityScale = rb.gravityScale;
-        CalculateJumpParameters();
+        anim = GetComponent<Animator>();
+        CalculatePhysics();
     }
-    
-    private void Update()
+
+    // 当你在Inspector修改数值时，实时更新物理参数
+    void OnValidate()
     {
-        // 检测地面
-        isGrounded = Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, groundLayer);
-        
-        // 输入处理
+        CalculatePhysics();
+    }
+
+    public void CalculatePhysics()
+    {
+
+        gravityStrength = (2f * jumpHeight) / Mathf.Pow(timeToApex, 2f);
+        jumpVelocity = gravityStrength * timeToApex;
+
+        if (rb != null)
+        {
+            rb.gravityScale = gravityStrength / Mathf.Abs(Physics2D.gravity.y);
+        }
+    }
+
+    void Update()
+    {
         HandleInput();
-        
-        // 更新动画参数
-        UpdateAnimationParameters();
+        CheckGround();
+        UpdateAnimations();
+        HandleInteraction(); // 监听 F 键交互
     }
-    
-    private void FixedUpdate()
+
+    void FixedUpdate()
     {
-        // 移动处理
-        HandleMovement();
-        
-        // 跳跃处理
-        HandleJump();
+        ApplyMovement();
     }
-    
+
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        //检查是否戴着面具且是 SportsMask 类型
+        if (hasMask && currentMaskInstance != null && currentMaskInstance.maskType == MaskType.SportsMask)
+        {
+            //检查是否正在下落（纵向速度为负)
+            if (rb.velocity.y < -0.1f)
+            {
+                //检查碰撞物体是否在砖块层级
+                if (((1 << collision.gameObject.layer) & brickLayer) != 0)
+                {
+                    HandleBrickDestruction(collision);
+                }
+            }
+        }
+    }
+
+    #endregion
+
+    #region Move && Jump
     private void HandleInput()
     {
-        // 水平移动输入 (A/Z 向左, D/X 向右)
-        float horizontalInput = Input.GetAxisRaw("Horizontal");
-        if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.Z))
+        float moveInput = 0;
+        if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.Z)) moveInput = -1f;
+        else if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.X)) moveInput = 1f;
+        horizontalInput = moveInput;
+
+        if (isGrounded && (Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.Space)))
         {
-            moveInput = -1f;
+            rb.velocity = new Vector2(rb.velocity.x, jumpVelocity);
         }
-        else if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.X))
-        {
-            moveInput = 1f;
-        }
-        else
-        {
-            moveInput = horizontalInput;
-        }
-        
-        // 跳跃输入 (W 键或空格键)
-        isJumpPressed = Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.Space);
     }
-    
-    private void HandleMovement()
+
+    private void ApplyMovement()
     {
-        if (moveInput != 0)
+        float targetSpeed = horizontalInput * maxSpeed;
+
+        if (Mathf.Abs(horizontalInput) > 0.01f)
         {
-            // 基于加速度的平滑移动
-            float currentSpeed = rb.velocity.x;
-            float targetSpeed = moveInput * maxMoveSpeed;
-            
-            // 计算加速度
-            float acceleration = moveInput * moveAcceleration * Time.fixedDeltaTime;
-            
-            // 应用加速度
-            float newSpeed = currentSpeed + acceleration;
-            
-            // 限制最大速度
-            newSpeed = Mathf.Clamp(newSpeed, -maxMoveSpeed, maxMoveSpeed);
-            
-            // 应用新速度
+            float currentX = rb.velocity.x;
+            if (Mathf.Abs(currentX) < startSpeed)
+            {
+                currentX = horizontalInput * startSpeed;
+            }
+
+            float newSpeed = Mathf.MoveTowards(currentX, targetSpeed, acceleration * Time.fixedDeltaTime);
             rb.velocity = new Vector2(newSpeed, rb.velocity.y);
         }
         else
         {
-            // 没有输入时，逐渐减速
-            rb.velocity = new Vector2(Mathf.Lerp(rb.velocity.x, 0f, 0.1f), rb.velocity.y);
+            rb.velocity = new Vector2(Mathf.MoveTowards(rb.velocity.x, 0, acceleration * Time.fixedDeltaTime), rb.velocity.y);
         }
     }
-    
-    private void HandleJump()
+
+    private void CheckGround()
     {
-        if (isGrounded && isJumpPressed)
+        isGrounded = Physics2D.OverlapCircle(groundCheckPoint.position, checkRadius, groundLayer);
+    }
+    #endregion
+
+    #region CheckInteraction
+
+    private void HandleInteraction()
+    {
+        if (Input.GetKeyDown(KeyCode.F))
         {
-            // 应用跳跃力
-            rb.velocity = new Vector2(rb.velocity.x, jumpForce);
+            Collider2D[] hits = Physics2D.OverlapCircleAll(transform.position, interactRange, maskLayer);
+            foreach (var hit in hits)
+            {
+                if (hit.CompareTag("Mask") && hit.TryGetComponent<PlayerMask>(out var newMask))
+                {
+                    SwapMask(newMask);
+                    return; // 每次只交互一个
+                }
+            }
+
+            CheckForLock();
         }
     }
-    
-    private void CalculateJumpParameters()
+
+    private void SwapMask(PlayerMask newMask)
     {
-        // 计算重力加速度
-        gravityScale = (2 * jumpMaxHeight) / (jumpTimeToApex * jumpTimeToApex);
-        
-        // 计算跳跃力
-        jumpForce = (2 * jumpMaxHeight) / jumpTimeToApex;
-        
-        // 应用重力缩放
-        rb.gravityScale = gravityScale;
-    }
-    
-    private void UpdateAnimationParameters()
-    {
-        // 更新移动动画参数
-        animator.SetBool(IsMoving, Mathf.Abs(rb.velocity.x) > 0.1f);
-        
-        // 更新跳跃动画参数
-        animator.SetBool(IsJumping, !isGrounded && rb.velocity.y > 0.1f);
-        
-        // 更新地面检测动画参数
-        animator.SetBool(IsGrounded, isGrounded);
-    }
-    
-    // 当跳跃参数变化时重新计算
-    private void OnValidate()
-    {
-        CalculateJumpParameters();
-    }
-    
-    // 绘制地面检测范围
-    private void OnDrawGizmos()
-    {
-        if (groundCheck != null)
+        // 如果当前已经戴着面具，先把它扔出来
+        if (hasMask && currentMaskInstance != null)
         {
-            Gizmos.color = Color.green;
-            Gizmos.DrawWireSphere(groundCheck.position, groundCheckRadius);
+            // 移除旧面具效果
+            currentMaskInstance.RemoveEffect(this);
+
+            // 在原地重新生成旧面具的预制体
+            // 注意：这里需要我们在 PlayerMask 里存一下它自己的原始预制体引用
+            Instantiate(currentMaskInstance.originalPrefab, maskDropPoint.position, Quaternion.identity);
+
+            // 销毁当前的逻辑组件
+            Destroy(currentMaskInstance);
+        }
+
+        // 穿戴新面具
+        currentMaskInstance = gameObject.AddComponent(newMask.GetType()) as PlayerMask;
+
+        // 复制属性
+        CopyMaskProperties(newMask, currentMaskInstance);
+
+        // 应用效果
+        currentMaskInstance.ApplyEffect(this);
+
+        // 销毁场景中的面具物体
+        newMask.BeConsumed();
+
+        hasMask = true;
+
+    }
+
+    private void CopyMaskProperties(PlayerMask source, PlayerMask target)
+    {
+        target.maskType = source.maskType;
+        target.maskName = source.maskName;
+        target.originalPrefab = source.originalPrefab; // 确保新组件知道自己是谁
+        target.maskCoverPrefab = source.maskCoverPrefab;
+    }
+
+    private void CheckForLock()
+    {
+        if (!hasMask || currentMaskInstance == null) return;
+
+        // 在交互范围内寻找层级为 "Door" 的物体
+        Collider2D hit = Physics2D.OverlapCircle(transform.position, interactRange, doorLayer);
+
+        if (hit != null && hit.TryGetComponent<Door>(out var lockHole))
+        {
+            // 调用锁孔的验证逻辑
+            if (lockHole.TryOpen(currentMaskInstance.maskType))
+            {
+                // 解锁成功：清理玩家身上的面具效果
+                currentMaskInstance.RemoveEffect(this);
+
+                // 销毁逻辑组件并重置状态
+                Destroy(currentMaskInstance);
+                currentMaskInstance = null;
+                hasMask = false; // 允许再次拾取
+
+                // 同步动画状态
+                //anim.SetInteger("MaskID", 0);
+            }
         }
     }
+    #endregion
+
+    #region SportsMask
+
+    private void HandleBrickDestruction(Collision2D collision)
+    {
+        if (collision.gameObject.TryGetComponent<UnityEngine.Tilemaps.Tilemap>(out var tilemap))
+        {
+            // 以第一个碰撞点为中心进行范围销毁
+            Vector3 smashCenter = collision.contacts[0].point;
+
+            // 遍历以碰撞点为中心的矩形区域
+            for (float x = -smashRadius; x <= smashRadius; x += 0.5f)
+            {
+                for (float y = -smashRadius; y <= smashRadius; y += 0.5f)
+                {
+                    Vector3 checkPos = smashCenter + new Vector3(x, y, 0);
+                    Vector3Int cellPos = tilemap.WorldToCell(checkPos);
+
+                    if (tilemap.HasTile(cellPos))
+                    {
+                        tilemap.SetTile(cellPos, null);
+                    }
+                }
+            }
+        }
+    }
+
+    #endregion
+
+    #region UpdateAnimations
+
+    private void UpdateAnimations()
+    {
+        if (anim == null) return;
+
+        //anim.SetBool(IsMoving, Mathf.Abs(horizontalInput) > 0.1f);
+        //anim.SetBool(OnGround, isGrounded);
+        //anim.SetFloat(VerticalVelocity, rb.velocity.y);
+
+        // 角色转向
+        if (horizontalInput > 0) transform.localScale = new Vector3(1, 1, 1);
+        else if (horizontalInput < 0) transform.localScale = new Vector3(-1, 1, 1);
+    }
+
+    #endregion
+
+    #region Gizmos
+    // 在编辑器中绘制检测范围
+    private void OnDrawGizmosSelected()
+    {
+        if (groundCheckPoint != null)
+        {
+            Gizmos.color = Color.red;
+            Gizmos.DrawWireSphere(groundCheckPoint.position, checkRadius);
+        }
+
+        if(maskDropPoint != null)
+        {
+            Gizmos.color = Color.yellow;
+            Gizmos.DrawWireSphere(maskDropPoint.position, interactRange);
+        }
+    }
+
+    #endregion
 }
