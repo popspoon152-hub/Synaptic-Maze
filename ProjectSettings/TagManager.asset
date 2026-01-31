@@ -12,7 +12,7 @@ TagManager:
   - CoverMaskCover
   - Spikes
   - PumpkinMaskCoverSpikes
-  - CheckPoints
+  - TeachMaskCover
   layers:
   - Default
   - TransparentFX

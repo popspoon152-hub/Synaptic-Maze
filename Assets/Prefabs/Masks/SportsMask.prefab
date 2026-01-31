@@ -146,5 +146,5 @@ MonoBehaviour:
   maskType: 2
   maskName: SportsMask
   originalPrefab: {fileID: 8234491385998222805}
-  maskCoverPrefab: {fileID: 0}
+  maskCoverPrefab: {fileID: 704857783160832105, guid: 2b1c6779093fbf846b9470146aa2ae81, type: 3}
   weightScale: 2.5
