@@ -36,7 +36,7 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private LayerMask doorLayer;       // 设置为 "Door" 图层
     [SerializeField] private Transform maskDropPoint;   // 面具掉落位置（角色头顶或前方）
 
-    //[SerializeField] private SpriteRenderer headMaskRenderer; //头上戴的
+    [SerializeField] private SpriteRenderer headMaskRenderer; //头上戴的
     [Header("开局设置")]
     [SerializeField] private GameObject startMaskPrefab;    //开局时戴的面具预制体
 
@@ -224,6 +224,13 @@ public class PlayerController : MonoBehaviour
         // 销毁场景中的面具物体
         newMask.BeConsumed();
 
+
+        if (headMaskRenderer != null)
+        {
+            headMaskRenderer.sprite = currentMaskInstance.MaskSprite;
+            headMaskRenderer.enabled = true;
+        }
+
         hasMask = true;
 
     }
@@ -256,8 +263,13 @@ public class PlayerController : MonoBehaviour
                 currentMaskInstance = null;
                 hasMask = false; // 允许再次拾取
 
-                // 同步动画状态
-                //anim.SetInteger("MaskID", 0);
+                if (headMaskRenderer != null)
+                {
+                    headMaskRenderer.sprite = null;
+                    headMaskRenderer.enabled = false;
+                }
+
+                hasMask = false;
             }
         }
     }
@@ -272,7 +284,11 @@ public class PlayerController : MonoBehaviour
         currentMaskInstance.ApplyEffect(this);
         hasMask = true;
 
-        //if (anim != null) anim.SetInteger("MaskID", (int)currentMaskInstance.maskType);
+        if (headMaskRenderer != null && maskData != null)
+        {
+            headMaskRenderer.sprite = maskData.MaskSprite;
+            headMaskRenderer.enabled = true; // 确保显示
+        }
     }
 
     #endregion
