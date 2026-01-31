@@ -147,3 +147,4 @@ MonoBehaviour:
   maskName: TeachMask
   originalPrefab: {fileID: 1364828282034871405}
   maskCoverPrefab: {fileID: 1038059160441171975, guid: 95653ee6fb582db47b13e122140a33ea, type: 3}
+  MaskSprite: {fileID: -1136635279, guid: 5587a15e538d249498ecf06a6fcda716, type: 3}

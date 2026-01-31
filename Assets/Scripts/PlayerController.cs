@@ -35,6 +35,8 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private LayerMask maskLayer;       // 设置为 "Mask" 图层
     [SerializeField] private LayerMask doorLayer;       // 设置为 "Door" 图层
     [SerializeField] private Transform maskDropPoint;   // 面具掉落位置（角色头顶或前方）
+
+    //[SerializeField] private SpriteRenderer headMaskRenderer; //头上戴的
     [Header("开局设置")]
     [SerializeField] private GameObject startMaskPrefab;    //开局时戴的面具预制体
 

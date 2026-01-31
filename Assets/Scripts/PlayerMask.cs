@@ -20,6 +20,7 @@ public abstract class PlayerMask : MonoBehaviour
     public string maskName;
     public GameObject originalPrefab;
     public GameObject maskCoverPrefab;
+    public Sprite MaskSprite;
 
     public abstract void ApplyEffect(PlayerController player);
     public abstract void RemoveEffect(PlayerController player);
