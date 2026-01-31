@@ -6,3 +6,4 @@ PumpkinMaskCover是戴上南瓜面具后会消失的普通地形，
 PumpkinMaskCoverSpikes是戴上南瓜面具后会出现的刺，
 OnewayPlatforms是单向平台，
 Spikes是刺，
+darkness可以为地图中的该格子添加黑暗效果，
