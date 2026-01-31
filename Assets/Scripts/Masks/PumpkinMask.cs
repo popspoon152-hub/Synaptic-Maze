@@ -1,40 +1,46 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Tilemaps;
 
 public class PumpkinMask : PlayerMask
 {
     private GameObject instantiatedOverlay;
-    private GameObject[] hiddenAreas; // 存储场景中所有的隐藏区域
 
     public override void ApplyEffect(PlayerController player)
     {
+        //遮罩
         if (maskCoverPrefab != null)
         {
-            // 寻找场景中的 Canvas
             Canvas canvas = FindFirstObjectByType<Canvas>();
             instantiatedOverlay = Instantiate(maskCoverPrefab, canvas.transform);
         }
 
-        hiddenAreas = GameObject.FindGameObjectsWithTag("PumpkinMaskCover");
-        foreach (GameObject area in hiddenAreas)
-        {
-            area.SetActive(false);
-        }
+        //将 PumpkinMaskCover 设为全透明
+        SetTilemapAlpha("PumpkinMaskCover", 0f);
+
+        //PumpkinMaskCoverSpikes 设为不透明（恢复正常）
+        SetTilemapAlpha("PumpkinMaskCoverSpikes", 1f);
     }
 
     public override void RemoveEffect(PlayerController player)
     {
-        if (instantiatedOverlay != null)
-        {
-            Destroy(instantiatedOverlay);
-        }
+        //销毁 UI
+        if (instantiatedOverlay != null) Destroy(instantiatedOverlay);
 
-        if (hiddenAreas != null)
+        //效果反转
+        SetTilemapAlpha("PumpkinMaskCover", 1f);
+        SetTilemapAlpha("PumpkinMaskCoverSpikes", 0f);
+    }
+
+    private void SetTilemapAlpha(string tag, float alpha)
+    {
+        GameObject[] targets = GameObject.FindGameObjectsWithTag(tag);
+        foreach (GameObject obj in targets)
         {
-            foreach (GameObject area in hiddenAreas)
+            if (obj.TryGetComponent<Tilemap>(out var tilemap))
             {
-                if (area != null) area.SetActive(true);
+                Color c = tilemap.color;
+                c.a = alpha;
+                tilemap.color = c;
             }
         }
     }

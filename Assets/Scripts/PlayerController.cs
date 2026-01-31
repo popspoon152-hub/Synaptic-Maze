@@ -32,11 +32,13 @@ public class PlayerController : MonoBehaviour
 
     [Header("面具交互设置")]
     [SerializeField] private float interactRange = 1.5f;
-    [SerializeField] private LayerMask itemLayer;       // 设置为 "Item" 图层
+    [SerializeField] private LayerMask maskLayer;       // 设置为 "Mask" 图层
+    [SerializeField] private LayerMask doorLayer;       // 设置为 "Door" 图层
     [SerializeField] private Transform maskDropPoint;   // 面具掉落位置（角色头顶或前方）
 
     private PlayerMask currentMaskInstance; // 存储当前逻辑组件
     private GameObject currentMaskPrefab;    // 存储当前面具的预制体引用，用于交换时重新生成
+    private bool hasMask = false;
 
     #endregion
 
@@ -137,7 +139,7 @@ public class PlayerController : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.F))
         {
-            Collider2D[] hits = Physics2D.OverlapCircleAll(transform.position, interactRange, itemLayer);
+            Collider2D[] hits = Physics2D.OverlapCircleAll(transform.position, interactRange, maskLayer);
             foreach (var hit in hits)
             {
                 if (hit.CompareTag("Mask") && hit.TryGetComponent<PlayerMask>(out var newMask))
@@ -154,7 +156,7 @@ public class PlayerController : MonoBehaviour
     private void SwapMask(PlayerMask newMask)
     {
         // 如果当前已经戴着面具，先把它扔出来
-        if (currentMaskInstance != null)
+        if (hasMask && currentMaskInstance != null)
         {
             // 移除旧面具效果
             currentMaskInstance.RemoveEffect(this);
@@ -179,6 +181,8 @@ public class PlayerController : MonoBehaviour
         // 销毁场景中的面具物体
         newMask.BeConsumed();
 
+        hasMask = true;
+
     }
 
     private void CopyMaskProperties(PlayerMask source, PlayerMask target)
@@ -191,7 +195,28 @@ public class PlayerController : MonoBehaviour
 
     private void CheckForLock()
     {
-        throw new NotImplementedException();
+        if (!hasMask || currentMaskInstance == null) return;
+
+        // 在交互范围内寻找层级为 "Door" 的物体
+        Collider2D hit = Physics2D.OverlapCircle(transform.position, interactRange, doorLayer);
+
+        if (hit != null && hit.TryGetComponent<Door>(out var lockHole))
+        {
+            // 调用锁孔的验证逻辑
+            if (lockHole.TryOpen(currentMaskInstance.maskType))
+            {
+                // 解锁成功：清理玩家身上的面具效果
+                currentMaskInstance.RemoveEffect(this);
+
+                // 销毁逻辑组件并重置状态
+                Destroy(currentMaskInstance);
+                currentMaskInstance = null;
+                hasMask = false; // 允许再次拾取
+
+                // 同步动画状态
+                //anim.SetInteger("MaskID", 0);
+            }
+        }
     }
     #endregion
 
@@ -220,6 +245,12 @@ public class PlayerController : MonoBehaviour
         {
             Gizmos.color = Color.red;
             Gizmos.DrawWireSphere(groundCheckPoint.position, checkRadius);
+        }
+
+        if(maskDropPoint != null)
+        {
+            Gizmos.color = Color.yellow;
+            Gizmos.DrawWireSphere(maskDropPoint.position, interactRange);
         }
     }
 

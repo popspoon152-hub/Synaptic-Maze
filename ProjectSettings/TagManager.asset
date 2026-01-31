@@ -6,6 +6,13 @@ TagManager:
   tags:
   - Mask
   - PumpkinMaskCover
+  - SportsMaskCover
+  - JumpMaskCover
+  - LightMaskCover
+  - CoverMaskCover
+  - Spikes
+  - PumpkinMaskCoverSpikes
+  - CheckPoints
   layers:
   - Default
   - TransparentFX
@@ -15,8 +22,8 @@ TagManager:
   - UI
   - Ground
   - OneWay
-  - 
-  - 
+  - Mask
+  - Door
   - 
   - 
   - 
