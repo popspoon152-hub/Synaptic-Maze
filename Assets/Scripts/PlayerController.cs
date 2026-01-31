@@ -56,9 +56,10 @@ public class PlayerController : MonoBehaviour
     #region Animations
     // 动画参数
     private Animator anim;
-    private static readonly int IsMoving = Animator.StringToHash("isMoving");
-    private static readonly int VerticalVelocity = Animator.StringToHash("verticalVelocity");
-    private static readonly int OnGround = Animator.StringToHash("isGrounded");
+    private string currentAnim;
+    //private static readonly int IsMoving = Animator.StringToHash("isMoving");
+    //private static readonly int VerticalVelocity = Animator.StringToHash("verticalVelocity");
+    //private static readonly int OnGround = Animator.StringToHash("isGrounded");
 
     #endregion
 
@@ -306,15 +307,34 @@ public class PlayerController : MonoBehaviour
 
     private void UpdateAnimations()
     {
-        if (anim == null) return;
+        string nextAnim;
 
-        anim.SetBool(IsMoving, Mathf.Abs(horizontalInput) > 0.1f);
-        anim.SetBool(OnGround, isGrounded);
-        anim.SetFloat(VerticalVelocity, rb.velocity.y);
+        if (!isGrounded)
+        {
+            // 只要离地，就播跳跃
+            nextAnim = "Jump";
+        }
+        else if (Mathf.Abs(horizontalInput) > 0.1f)
+        {
+            // 在地且移动，播走路
+            nextAnim = "Walk";
+        }
+        else
+        {
+            // 在地且不动，播待机
+            nextAnim = "Idle";
+        }
 
-        // 角色转向
-        if (horizontalInput > 0) transform.localScale = new Vector3(1, 1, 1);
-        else if (horizontalInput < 0) transform.localScale = new Vector3(-1, 1, 1);
+        // 只有当动画改变时才调用 Play，避免每帧重置动画导致“卡死在第一帧”
+        if (currentAnim != nextAnim)
+        {
+            anim.Play(nextAnim);
+            currentAnim = nextAnim;
+        }
+
+        // 转向逻辑保持不变
+        if (horizontalInput != 0)
+            transform.localScale = new Vector3(Mathf.Sign(horizontalInput), 1, 1);
     }
 
     #endregion
