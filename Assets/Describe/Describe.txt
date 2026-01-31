@@ -1,0 +1,8 @@
+GameSecne/Grid中编辑地图
+Ground是墙，
+Brick是砖块，会被运动面具破坏，
+BackGround是背景图，
+PumpkinMaskCover是戴上南瓜面具后会消失的普通地形，
+PumpkinMaskCoverSpikes是戴上南瓜面具后会出现的刺，
+OnewayPlatforms是单向平台，
+Spikes是刺，

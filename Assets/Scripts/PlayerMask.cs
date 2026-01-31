@@ -6,7 +6,10 @@ using UnityEngine.Rendering;
 public enum MaskType 
 { 
     None, 
-    PumpkinMask 
+    PumpkinMask,
+    SportsMask,
+    JumpMask,
+    TeachMask,
 };
 
 public abstract class PlayerMask : MonoBehaviour

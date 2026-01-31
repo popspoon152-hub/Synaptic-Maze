@@ -7,18 +7,18 @@ public class PlayerController : MonoBehaviour
 
     #region Walk && Jump Parameters
     [Header("移动设置 (Movement)")]
-    [SerializeField] private float startSpeed = 2f;      // 初始速度
-    [SerializeField] private float acceleration = 20f;   // 加速度
-    [SerializeField] private float maxSpeed = 8f;        // 最大速度
+    public float startSpeed = 2f;      // 初始速度
+    public float acceleration = 20f;   // 加速度
+    public float maxSpeed = 8f;        // 最大速度
 
     [Header("跳跃设置 (Jump Settings)")]
-    [SerializeField] private float jumpHeight = 4f;      // 跳跃最高高度
-    [SerializeField] private float timeToApex = 0.4f;    // 到达顶点所需时间
+    public float jumpHeight = 4f;      // 跳跃最高高度
+    public float timeToApex = 0.4f;    // 到达顶点所需时间
 
     [Header("地面检测 (Ground Check)")]
-    [SerializeField] private LayerMask groundLayer;      // 地面图层
-    [SerializeField] private Transform groundCheckPoint; // 检测点
-    [SerializeField] private float checkRadius = 0.2f;   // 检测半径
+    public LayerMask groundLayer;      // 地面图层
+    public Transform groundCheckPoint; // 检测点
+    public float checkRadius = 0.2f;   // 检测半径
 
     private Rigidbody2D rb;
     private float horizontalInput;
@@ -42,6 +42,14 @@ public class PlayerController : MonoBehaviour
 
     #endregion
 
+    #region SportsMaskParameters
+
+    [Header("SportsMask 砖块交互")]
+    [SerializeField] private LayerMask brickLayer;
+    [SerializeField] private float smashRadius = 1.0f;
+
+    #endregion
+
     #region Animations
     // 动画参数
     private Animator anim;
@@ -51,7 +59,7 @@ public class PlayerController : MonoBehaviour
 
     #endregion
 
-    #region LifeCycle
+    #region LifeCycle  Input && Physics && SportsMask
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
@@ -65,7 +73,7 @@ public class PlayerController : MonoBehaviour
         CalculatePhysics();
     }
 
-    private void CalculatePhysics()
+    public void CalculatePhysics()
     {
 
         gravityStrength = (2f * jumpHeight) / Mathf.Pow(timeToApex, 2f);
@@ -88,6 +96,23 @@ public class PlayerController : MonoBehaviour
     void FixedUpdate()
     {
         ApplyMovement();
+    }
+
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        //检查是否戴着面具且是 SportsMask 类型
+        if (hasMask && currentMaskInstance != null && currentMaskInstance.maskType == MaskType.SportsMask)
+        {
+            //检查是否正在下落（纵向速度为负)
+            if (rb.velocity.y < -0.1f)
+            {
+                //检查碰撞物体是否在砖块层级
+                if (((1 << collision.gameObject.layer) & brickLayer) != 0)
+                {
+                    HandleBrickDestruction(collision);
+                }
+            }
+        }
     }
 
     #endregion
@@ -133,7 +158,7 @@ public class PlayerController : MonoBehaviour
     }
     #endregion
 
-    #region CheckMask
+    #region CheckInteraction
 
     private void HandleInteraction()
     {
@@ -218,6 +243,34 @@ public class PlayerController : MonoBehaviour
             }
         }
     }
+    #endregion
+
+    #region SportsMask
+
+    private void HandleBrickDestruction(Collision2D collision)
+    {
+        if (collision.gameObject.TryGetComponent<UnityEngine.Tilemaps.Tilemap>(out var tilemap))
+        {
+            // 以第一个碰撞点为中心进行范围销毁
+            Vector3 smashCenter = collision.contacts[0].point;
+
+            // 遍历以碰撞点为中心的矩形区域
+            for (float x = -smashRadius; x <= smashRadius; x += 0.5f)
+            {
+                for (float y = -smashRadius; y <= smashRadius; y += 0.5f)
+                {
+                    Vector3 checkPos = smashCenter + new Vector3(x, y, 0);
+                    Vector3Int cellPos = tilemap.WorldToCell(checkPos);
+
+                    if (tilemap.HasTile(cellPos))
+                    {
+                        tilemap.SetTile(cellPos, null);
+                    }
+                }
+            }
+        }
+    }
+
     #endregion
 
     #region UpdateAnimations
