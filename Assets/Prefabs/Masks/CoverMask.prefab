@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 7878169668717607535}
   m_Layer: 8
   m_Name: CoverMask
-  m_TagString: Untagged
+  m_TagString: Mask
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -147,3 +147,4 @@ MonoBehaviour:
   maskName: CoverMask
   originalPrefab: {fileID: 3182060239071136805}
   maskCoverPrefab: {fileID: 0}
+  MaskSprite: {fileID: 0}

@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 6918731941464947929}
   m_Layer: 8
   m_Name: JumpMask
-  m_TagString: Untagged
+  m_TagString: Mask
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -147,4 +147,5 @@ MonoBehaviour:
   maskName: JumpMask
   originalPrefab: {fileID: 5235326951398118237}
   maskCoverPrefab: {fileID: 3860105040633952256, guid: 3b746f28c7409a340bd3d2a06a089799, type: 3}
+  MaskSprite: {fileID: 0}
   jumpMultiplier: 1.5

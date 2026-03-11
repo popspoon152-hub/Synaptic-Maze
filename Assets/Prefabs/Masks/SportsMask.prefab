@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 8450054150319550077}
   m_Layer: 8
   m_Name: SportsMask
-  m_TagString: Untagged
+  m_TagString: Mask
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -147,4 +147,5 @@ MonoBehaviour:
   maskName: SportsMask
   originalPrefab: {fileID: 8234491385998222805}
   maskCoverPrefab: {fileID: 704857783160832105, guid: 2b1c6779093fbf846b9470146aa2ae81, type: 3}
+  MaskSprite: {fileID: 0}
   weightScale: 2.5
